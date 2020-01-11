@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    MIT License
+
+    Copyright (c) 2019 Bayu Dwiyan Satria
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bayudwiyansatria</groupId>
@@ -97,7 +122,6 @@
 		<checkstyle.version>8.11</checkstyle.version>
 
 		<!-- JVM Properties -->
-		<java.debug>true</java.debug>
 		<java.version>1.8</java.version>
 		<maven.version>3.6.1</maven.version>
 		<java.optimize>true</java.optimize>
@@ -144,6 +168,8 @@
 		<sonatype.plugins.version>1.6.7</sonatype.plugins.version>
 		<github.plugins.version>0.12</github.plugins.version>
 		<jacoco-maven-plugin.version>0.8.4</jacoco-maven-plugin.version>
+		<bayudwiyansatria-core.version>1.1.8-SNAPSHOT</bayudwiyansatria-core.version>
+		<jmh.version>1.21</jmh.version>
 	</properties>
 
 	<dependencyManagement>
@@ -156,17 +182,21 @@
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>org.hamcrest</groupId>
-					<artifactId>hamcrest-core</artifactId>
-				</exclusion>
-			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-core</artifactId>
+			<version>${jmh.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-generator-annprocess</artifactId>
+			<version>${jmh.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.bayudwiyansatria</groupId>
 			<artifactId>core</artifactId>
-			<version>1.1.7</version>
+			<version>${bayudwiyansatria-core.version}</version>
 		</dependency>
 	</dependencies>
 	<repositories>
@@ -268,47 +298,9 @@
 						</execution>
 					</executions>
 				</plugin>
-				<plugin>
-					<groupId>org.jacoco</groupId>
-					<artifactId>jacoco-maven-plugin</artifactId>
-					<version>${jacoco-maven-plugin.version}</version>
-					<configuration>
-						<excludes>
-							<exclude>**/FastRegexpLineParser.*</exclude>
-						</excludes>
-					</configuration>
-					<executions>
-						<execution>
-							<goals>
-								<goal>prepare-agent</goal>
-							</goals>
-						</execution>
-						<execution>
-							<id>report</id>
-							<phase>prepare-package</phase>
-							<goals>
-								<goal>report</goal>
-							</goals>
-						</execution>
-					</executions>
-				</plugin>
 			</plugins>
 		</pluginManagement>
 		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>${maven-clean-plugin.version}</version>
-				<executions>
-					<execution>
-						<id>auto-clean</id>
-						<phase>clean</phase>
-						<goals>
-							<goal>clean</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -347,6 +339,7 @@
 						<exclude>*.yml</exclude>
 						<exclude>*.yaml</exclude>
 						<exclude>.github/*</exclude>
+						<exclude>src/main/resources/*</exclude>
 					</excludes>
 					<includes>
 						<include>src/main/**/*</include>
@@ -370,7 +363,7 @@
 				<version>${maven-versions-plugin.version}</version>
 				<executions>
 					<execution>
-						<id>analyze-dependency-updates</id>
+						<id>dependency-updates</id>
 						<phase>compile</phase>
 						<goals>
 							<goal>display-dependency-updates</goal>
@@ -455,7 +448,7 @@
 						<id>analyze-dependencies</id>
 						<phase>verify</phase>
 						<goals>
-							<goal>analyze-only</goal>
+							<goal>analyze</goal>
 						</goals>
 					</execution>
 				</executions>
@@ -504,11 +497,22 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>${jacoco-maven-plugin.version}</version>
+				<configuration>
+					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
+					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+				</configuration>
 				<executions>
 					<execution>
 						<id>coverage-initialize</id>
 						<goals>
 							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report-aggregate</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>report</goal>
 						</goals>
 					</execution>
 					<execution>
@@ -518,28 +522,7 @@
 							<goal>report</goal>
 						</goals>
 					</execution>
-					<!-- Threshold -->
-					<execution>
-						<id>coverage-check</id>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
 				</executions>
-				<configuration>
-        <rules>
-          <rule>
-            <element>CLASS</element>
-            <limits>
-              <limit>
-                <counter>LINE</counter>
-                <value>COVEREDRATIO</value>
-                <minimum>80%</minimum>
-              </limit>
-            </limits>
-          </rule>
-        </rules>
-      </configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
